@@ -1,4 +1,4 @@
-import type { HTMLPasteEventDetail } from '@editorjs/editorjs';
+import type { HTMLPasteEventDetail } from "@editorjs/editorjs";
 
 /**
  * Represents options for uploading, including a function to handle previewing.
@@ -40,7 +40,7 @@ export interface ActionConfig {
    * An optional action function to be executed when the tune is activated.
    */
   action?: Function;
-};
+}
 
 /**
  * UploadResponseFormat interface representing the response format expected from the backend on file uploading.
@@ -61,6 +61,16 @@ export interface UploadResponseFormat<AdditionalFileData = {}> {
      * The URL of the uploaded image.
      */
     url: string;
+
+    /**
+     * The width of the image in pixels.
+     */
+    width?: number;
+
+    /**
+     * The height of the image in pixels.
+     */
+    height?: number;
   } & AdditionalFileData;
 }
 
@@ -72,6 +82,11 @@ export type ImageToolData<Actions = {}, AdditionalFileData = {}> = {
    * Caption for the image.
    */
   caption: string;
+
+  /**
+   * Link for the image.
+   */
+  link: string;
 
   /**
    * Flag indicating whether the image has a border.
@@ -97,6 +112,16 @@ export type ImageToolData<Actions = {}, AdditionalFileData = {}> = {
      * The URL of the image.
      */
     url: string;
+
+    /**
+     * The width of the image in pixels.
+     */
+    width?: number;
+
+    /**
+     * The height of the image in pixels.
+     */
+    height?: number;
   } & AdditionalFileData;
 } & (Actions extends Record<string, boolean> ? Actions : {});
 
@@ -116,7 +141,12 @@ export type FeaturesConfig = {
    * Flag to enable/disable caption.
    * Can be set to 'optional' to allow users to toggle via block tunes.
    */
-  caption?: boolean | 'optional';
+  caption?: boolean | "optional";
+  /**
+   * Flag to enable/disable link.
+   * Can be set to 'optional' to allow users to toggle via block tunes.
+   */
+  link?: boolean | "optional";
   /**
    * Flag to enable/disable tune - stretched
    */
@@ -132,7 +162,6 @@ export interface ImageConfig {
    * Endpoints for upload, whether using file or URL.
    */
   endpoints: {
-
     /**
      * Endpoint for file upload.
      */
@@ -160,6 +189,11 @@ export interface ImageConfig {
   captionPlaceholder?: string;
 
   /**
+   * Placeholder text for the link field.
+   */
+  linkPlaceholder?: string;
+
+  /**
    * Additional data to send with requests.
    */
   additionalRequestData?: object;
@@ -178,7 +212,6 @@ export interface ImageConfig {
    * Optional custom uploader.
    */
   uploader?: {
-
     /**
      * Method to upload an image by file.
      */
@@ -189,6 +222,16 @@ export interface ImageConfig {
      */
     uploadByUrl?: (url: string) => Promise<UploadResponseFormat>;
   };
+
+  /**
+   * Custom file selection handler
+   * @param onUpload - callback to be called when file is selected with the response data
+   * @param onError - callback to be called when an error occurs
+   */
+  onSelectFile?: (
+    onUpload: (response: UploadResponseFormat) => void,
+    onError: (error: string) => void
+  ) => void;
 
   /**
    * Additional actions for the tool.
@@ -225,4 +268,14 @@ export type ImageSetterParam = {
    * url path of the image
    */
   url: string;
+
+  /**
+   * The width of the image in pixels
+   */
+  width?: number;
+
+  /**
+   * The height of the image in pixels
+   */
+  height?: number;
 };

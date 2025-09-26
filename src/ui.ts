@@ -1,7 +1,7 @@
-import { IconPicture } from '@codexteam/icons';
-import { make } from './utils/dom';
-import type { API } from '@editorjs/editorjs';
-import type { ImageConfig } from './types/types';
+import { IconPicture } from "@codexteam/icons";
+import { make } from "./utils/dom";
+import type { API } from "@editorjs/editorjs";
+import type { ImageConfig } from "./types/types";
 
 /**
  * Enumeration representing the different states of the UI.
@@ -10,18 +10,18 @@ export enum UiState {
   /**
    * The UI is in an empty state, with no image loaded or being selected.
    */
-  Empty = 'empty',
+  Empty = "empty",
 
   /**
    * The UI is in an uploading state, indicating an image is currently being uploaded.
    */
-  Uploading = 'uploading',
+  Uploading = "uploading",
 
   /**
    * The UI is in a filled state, with an image successfully loaded.
    */
-  Filled = 'filled'
-};
+  Filled = "filled",
+}
 
 /**
  * Nodes interface representing various elements in the UI.
@@ -56,6 +56,11 @@ interface Nodes {
    * Caption element for the image.
    */
   caption: HTMLElement;
+
+  /**
+   * Link element for the image.
+   */
+  link: HTMLElement;
 }
 
 /**
@@ -78,6 +83,12 @@ interface ConstructorParams {
    * Flag indicating if the UI is in read-only mode.
    */
   readOnly: boolean;
+  /**
+   * Callback function that is called when image dimensions are available.
+   * @param width - The width of the image in pixels.
+   * @param height - The height of the image in pixels.
+   */
+  onImageDimensionsReady?: (width: number, height: number) => void;
 }
 
 /**
@@ -113,24 +124,40 @@ export default class Ui {
   private readOnly: boolean;
 
   /**
+   * Callback function that is called when image dimensions are available.
+   */
+  private onImageDimensionsReady?: (width: number, height: number) => void;
+
+  /**
    * @param ui - image tool Ui module
    * @param ui.api - Editor.js API
    * @param ui.config - user config
    * @param ui.onSelectFile - callback for clicks on Select file button
    * @param ui.readOnly - read-only mode flag
+   * @param ui.onImageDimensionsReady - callback for when image dimensions are available
    */
-  constructor({ api, config, onSelectFile, readOnly }: ConstructorParams) {
+  constructor({
+    api,
+    config,
+    onSelectFile,
+    readOnly,
+    onImageDimensionsReady,
+  }: ConstructorParams) {
     this.api = api;
     this.config = config;
     this.onSelectFile = onSelectFile;
     this.readOnly = readOnly;
+    this.onImageDimensionsReady = onImageDimensionsReady;
     this.nodes = {
-      wrapper: make('div', [this.CSS.baseClass, this.CSS.wrapper]),
-      imageContainer: make('div', [this.CSS.imageContainer]),
+      wrapper: make("div", [this.CSS.baseClass, this.CSS.wrapper]),
+      imageContainer: make("div", [this.CSS.imageContainer]),
       fileButton: this.createFileButton(),
       imageEl: undefined,
-      imagePreloader: make('div', this.CSS.imagePreloader),
-      caption: make('div', [this.CSS.input, this.CSS.caption], {
+      imagePreloader: make("div", this.CSS.imagePreloader),
+      caption: make("div", [this.CSS.input, this.CSS.caption], {
+        contentEditable: !this.readOnly,
+      }),
+      link: make("div", [this.CSS.input, this.CSS.link], {
         contentEditable: !this.readOnly,
       }),
     };
@@ -146,9 +173,11 @@ export default class Ui {
      *  </wrapper>
      */
     this.nodes.caption.dataset.placeholder = this.config.captionPlaceholder;
+    this.nodes.link.dataset.placeholder = this.config.linkPlaceholder;
     this.nodes.imageContainer.appendChild(this.nodes.imagePreloader);
     this.nodes.wrapper.appendChild(this.nodes.imageContainer);
     this.nodes.wrapper.appendChild(this.nodes.caption);
+    this.nodes.wrapper.appendChild(this.nodes.link);
     this.nodes.wrapper.appendChild(this.nodes.fileButton);
   }
 
@@ -158,7 +187,10 @@ export default class Ui {
    * @param status - true for enable, false for disable
    */
   public applyTune(tuneName: string, status: boolean): void {
-    this.nodes.wrapper.classList.toggle(`${this.CSS.wrapper}--${tuneName}`, status);
+    this.nodes.wrapper.classList.toggle(
+      `${this.CSS.wrapper}--${tuneName}`,
+      status
+    );
   }
 
   /**
@@ -176,6 +208,7 @@ export default class Ui {
    */
   public showPreloader(src: string): void {
     this.nodes.imagePreloader.style.backgroundImage = `url(${src})`;
+    this.nodes.imagePreloader.style.display = "block";
 
     this.toggleStatus(UiState.Uploading);
   }
@@ -184,7 +217,7 @@ export default class Ui {
    * Hide uploading preloader
    */
   public hidePreloader(): void {
-    this.nodes.imagePreloader.style.backgroundImage = '';
+    this.nodes.imagePreloader.style.backgroundImage = "";
     this.toggleStatus(UiState.Empty);
   }
 
@@ -194,9 +227,16 @@ export default class Ui {
    */
   public fillImage(url: string): void {
     /**
+     * Clear any existing image element before adding a new one
+     */
+    if (this.nodes.imageEl) {
+      this.nodes.imageContainer.removeChild(this.nodes.imageEl);
+    }
+
+    /**
      * Check for a source extension to compose element correctly: video tag for mp4, img — for others
      */
-    const tag = /\.mp4$/.test(url) ? 'VIDEO' : 'IMG';
+    const tag = /\.mp4$/.test(url) ? "VIDEO" : "IMG";
 
     const attributes: { [key: string]: string | boolean } = {
       src: url,
@@ -207,12 +247,12 @@ export default class Ui {
      * - IMG: load
      * - VIDEO: loadeddata
      */
-    let eventName = 'load';
+    let eventName = "load";
 
     /**
      * Update attributes and eventName if source is a mp4 video
      */
-    if (tag === 'VIDEO') {
+    if (tag === "VIDEO") {
       /**
        * Add attributes for playing muted mp4 as a gif
        */
@@ -224,7 +264,7 @@ export default class Ui {
       /**
        * Change event to be listened
        */
-      eventName = 'loadeddata';
+      eventName = "loadeddata";
     }
 
     /**
@@ -239,10 +279,22 @@ export default class Ui {
       this.toggleStatus(UiState.Filled);
 
       /**
-       * Preloader does not exists on first rendering with presaved data
+       * Hide preloader when image is loaded
        */
       if (this.nodes.imagePreloader !== undefined) {
-        this.nodes.imagePreloader.style.backgroundImage = '';
+        this.nodes.imagePreloader.style.backgroundImage = "";
+        this.nodes.imagePreloader.style.display = "none";
+      }
+
+      /**
+       * Get image dimensions if it's an image (not video)
+       */
+      if (tag === "IMG" && this.onImageDimensionsReady) {
+        const imgElement = this.nodes.imageEl as HTMLImageElement;
+        const width = imgElement.naturalWidth;
+        const height = imgElement.naturalHeight;
+
+        this.onImageDimensionsReady(width, height);
       }
     });
 
@@ -260,6 +312,16 @@ export default class Ui {
   }
 
   /**
+   * Shows link input
+   * @param text - link content text
+   */
+  public fillLink(text: string): void {
+    if (this.nodes.link !== undefined) {
+      this.nodes.link.innerHTML = text;
+    }
+  }
+
+  /**
    * Changes UI status
    * @param status - see {@link Ui.status} constants
    */
@@ -268,7 +330,10 @@ export default class Ui {
       if (Object.prototype.hasOwnProperty.call(UiState, statusType)) {
         const state = UiState[statusType as keyof typeof UiState];
 
-        this.nodes.wrapper.classList.toggle(`${this.CSS.wrapper}--${state}`, state === status);
+        this.nodes.wrapper.classList.toggle(
+          `${this.CSS.wrapper}--${state}`,
+          state === status
+        );
       }
     }
   }
@@ -286,23 +351,26 @@ export default class Ui {
       /**
        * Tool's classes
        */
-      wrapper: 'image-tool',
-      imageContainer: 'image-tool__image',
-      imagePreloader: 'image-tool__image-preloader',
-      imageEl: 'image-tool__image-picture',
-      caption: 'image-tool__caption',
+      wrapper: "image-tool",
+      imageContainer: "image-tool__image",
+      imagePreloader: "image-tool__image-preloader",
+      imageEl: "image-tool__image-picture",
+      caption: "image-tool__caption",
+      link: "image-tool__link",
     };
-  };
+  }
 
   /**
    * Creates upload-file button
    */
   private createFileButton(): HTMLElement {
-    const button = make('div', [this.CSS.button]);
+    const button = make("div", [this.CSS.button]);
 
-    button.innerHTML = this.config.buttonContent ?? `${IconPicture} ${this.api.i18n.t('Select an Image')}`;
+    button.innerHTML =
+      this.config.buttonContent ??
+      `${IconPicture} ${this.api.i18n.t("Select an Image")}`;
 
-    button.addEventListener('click', () => {
+    button.addEventListener("click", () => {
       this.onSelectFile();
     });
 

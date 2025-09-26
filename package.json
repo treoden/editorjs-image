@@ -1,13 +1,13 @@
 {
-  "name": "@editorjs/image",
-  "version": "2.10.3",
+  "name": "@evershop/editorjs-image",
+  "version": "1.1.0",
   "keywords": [
     "codex editor",
     "image",
     "editor.js",
     "editorjs"
   ],
-  "description": "Image Tool for Editor.js",
+  "description": "Image Tool for EverShop",
   "license": "MIT",
   "repository": "https://github.com/editor-js/image",
   "files": [
@@ -25,6 +25,7 @@
   },
   "scripts": {
     "dev": "concurrently \"vite\" \"node ./dev/server.js\"",
+    "test-custom": "vite --open ./dev/custom-selector-test.html",
     "build": "vite build",
     "lint": "eslint",
     "lint:errors": "eslint --quiet",

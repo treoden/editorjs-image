@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Custom File Selector Test | EditorJS Image Tool</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        padding: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      #editorjs {
+        border: 1px solid #e8e8eb;
+        border-radius: 5px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        margin-bottom: 20px;
+      }
+
+      .image-selector {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      .image-selector-content {
+        background: white;
+        padding: 20px;
+        border-radius: 5px;
+        max-width: 80%;
+        max-height: 80%;
+        overflow: auto;
+      }
+
+      .image-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+      }
+
+      .image-item {
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: border-color 0.3s;
+      }
+
+      .image-item:hover {
+        border-color: #388ae5;
+      }
+
+      .image-item img {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+      }
+
+      .selector-controls {
+        margin-top: 20px;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .selector-controls button {
+        margin-left: 10px;
+        padding: 8px 15px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .selector-controls .cancel {
+        background: #e8e8eb;
+      }
+
+      .selector-controls .select {
+        background: #388ae5;
+        color: white;
+      }
+
+      .save-button {
+        margin-top: 20px;
+        padding: 10px 15px;
+        background: #388ae5;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .output {
+        margin-top: 20px;
+        background: #f5f5f5;
+        padding: 10px;
+        border-radius: 5px;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Custom Image Selector Test</h1>
+    <div id="editorjs"></div>
+    <button class="save-button" onclick="saveEditor()">Save Content</button>
+    <div class="output" id="output"></div>
+
+    <div class="image-selector" id="imageSelector">
+      <div class="image-selector-content">
+        <h2>Select an Image</h2>
+        <div class="image-grid" id="imageGrid"></div>
+        <div class="selector-controls">
+          <button class="cancel" onclick="closeSelector()">Cancel</button>
+          <button class="select" onclick="selectImage()">Select</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+    <script type="module">
+      // Import our Image Tool
+      import ImageTool from "../src/index.ts";
+
+      // Make editor available globally
+      window.ImageTool = ImageTool;
+
+      // Sample images for our selector
+      window.sampleImages = [
+        {
+          url: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+          caption: "Anime Character",
+        },
+        {
+          url: "https://images.unsplash.com/photo-1682687218147-9806132dc697?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+          caption: "Ocean landscape",
+        },
+        {
+          url: "https://images.unsplash.com/photo-1682687220923-c58b9a4592ea?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+          caption: "Mountain landscape",
+        },
+        {
+          url: "https://images.unsplash.com/photo-1693750183776-046f6b256e36?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+          caption: "Colorful lights",
+        },
+        {
+          url: "https://images.unsplash.com/photo-1694932845822-0241521796f2?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+          caption: "Architectural pattern",
+        },
+      ];
+
+      // Initialize the editor when the module is loaded
+      document.addEventListener("DOMContentLoaded", function () {
+        initEditor();
+        populateImageSelector();
+      });
+
+      // Initialize Editor.js with our custom Image Tool
+      window.initEditor = function () {
+        window.editor = new EditorJS({
+          holder: "editorjs",
+          tools: {
+            image: {
+              class: ImageTool,
+              config: {
+                features: {
+                  caption: true,
+                  link: true, // Enable our new link feature
+                  border: true,
+                  background: true,
+                  stretch: true,
+                },
+                // Our custom file selection handler
+                onSelectFile: (onUpload, onError) => {
+                  // Store callbacks for later use when user makes a selection
+                  window.imageCallbacks = {
+                    onUpload,
+                    onError,
+                  };
+
+                  // Show our custom image selector
+                  document.getElementById("imageSelector").style.display =
+                    "flex";
+                },
+              },
+            },
+          },
+          onReady: () => {
+            console.log("Editor.js is ready!");
+          },
+          onChange: () => {
+            console.log("Content changed");
+          },
+        });
+      };
+
+      // Populate image grid in our custom selector
+      window.populateImageSelector = function () {
+        const grid = document.getElementById("imageGrid");
+        window.sampleImages.forEach((image, index) => {
+          const item = document.createElement("div");
+          item.className = "image-item";
+          item.dataset.index = index;
+          item.onclick = function () {
+            // Remove selection from all items
+            document.querySelectorAll(".image-item").forEach((el) => {
+              el.style.borderColor = "transparent";
+            });
+            // Highlight selected item
+            this.style.borderColor = "#388ae5";
+            window.selectedImageIndex = index;
+          };
+
+          const img = document.createElement("img");
+          img.src = image.url;
+          img.alt = image.caption;
+
+          item.appendChild(img);
+          grid.appendChild(item);
+        });
+      };
+
+      // Close the custom image selector
+      window.closeSelector = function () {
+        document.getElementById("imageSelector").style.display = "none";
+        window.selectedImageIndex = null;
+      };
+
+      // Handle image selection
+      window.selectImage = function () {
+        if (window.selectedImageIndex !== null && window.imageCallbacks) {
+          const selectedImage = window.sampleImages[window.selectedImageIndex];
+
+          // Call the onUpload callback with our selected image
+          window.imageCallbacks.onUpload({
+            success: 1,
+            file: {
+              url: selectedImage.url,
+              // We don't provide width and height here to test auto-detection
+            },
+          });
+
+          // Close the selector
+          closeSelector();
+        } else {
+          alert("Please select an image first.");
+        }
+      };
+
+      // Save editor content and display it
+      window.saveEditor = function () {
+        if (window.editor) {
+          window.editor
+            .save()
+            .then((outputData) => {
+              document.getElementById("output").textContent = JSON.stringify(
+                outputData,
+                null,
+                2
+              );
+              console.log("Saved data:", outputData);
+            })
+            .catch((error) => {
+              console.error("Saving error:", error);
+            });
+        }
+      };
+    </script>
+  </body>
+</html>

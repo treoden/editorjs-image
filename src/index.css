@@ -70,6 +70,33 @@
     }
   }
 
+  &__link {
+    visibility: hidden;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    margin-bottom: 10px;
+    margin-top: 5px;
+
+    &[contentEditable="true"][data-placeholder]::before {
+      position: absolute !important;
+      content: attr(data-placeholder);
+      color: #707684;
+      font-weight: normal;
+      display: none;
+    }
+
+    &[contentEditable="true"][data-placeholder]:empty {
+      &::before {
+        display: block;
+      }
+
+      &:focus::before {
+        display: none;
+      }
+    }
+  }
+
   &--empty {
     ^&__image {
       display: none;
@@ -82,7 +109,8 @@
 
   &--empty,
   &--uploading {
-    ^&__caption {
+    ^&__caption,
+    ^&__link {
       visibility: hidden !important;
     }
   }
@@ -98,72 +126,50 @@
     }
   }
 
-  &--filled {
-    .cdx-button {
-      display: none;
-    }
-
-    ^&__image {
-      &-preloader {
-        display: none;
-      }
-    }
-  }
-
-  &--uploading {
-    ^&__image {
-      min-height: 200px;
-      display: flex;
-      border: 1px solid var(--border-color);
-      background-color: #fff;
-
-      &-picture {
-        display: none;
-      }
-    }
-
-    .cdx-button {
-      display: none;
-    }
-  }
-
-  /**
-   * Tunes
-   * ----------------
-   */
-
-  &--withBorder {
-    ^&__image {
-      border: 1px solid var(--border-color);
-    }
-  }
-
-  &--withBackground {
+  &--with-background {
     ^&__image {
       padding: 15px;
       background: var(--bg-color);
-
-      &-picture {
-        max-width: 60%;
-        margin: 0 auto;
-      }
+      border-radius: 5px;
     }
   }
 
   &--stretched {
     ^&__image {
+      max-width: none;
+      width: 100%;
+    }
+  }
+
+  &--with-background {
+    ^&__image {
+      /* Increase specificity to override default width 100% */
       &-picture {
         width: 100%;
       }
     }
   }
 
-  &--caption {
-    ^&__caption {
-      visibility: visible;
+  &--with-border {
+    ^&__image {
+      border: 1px solid var(--border-color);
     }
+  }
 
-    padding-bottom: 50px
+  &--focused {
+    ^&__caption,
+    ^&__link {
+      visibility: visible !important;
+      position: relative;
+    }
+  }
+
+  &--filled {
+    ^&__caption,
+    ^&__link {
+      visibility: visible;
+      position: relative;
+    }
   }
 }
 
@@ -171,7 +177,6 @@
   0% {
     transform: rotate(0deg);
   }
-
   100% {
     transform: rotate(360deg);
   }
